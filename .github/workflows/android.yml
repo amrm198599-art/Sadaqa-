@@ -2,14 +2,14 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout source code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up JDK 17
@@ -18,14 +18,25 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Find and Build with Gradle
+      run: |
+        echo "Searching for gradlew..."
+        GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+        
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Error: gradlew not found!"
+          exit 1
+        fi
+        
+        PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+        echo "Found gradlew in: $PROJECT_DIR"
+        
+        cd "$PROJECT_DIR"
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
-    - name: Build APK with Gradle
-      run: ./gradlew assembleDebug
-
-    - name: Upload APK Artifact
+    - name: Find and Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: '**/build/outputs/apk/debug/*.apk'
