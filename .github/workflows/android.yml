@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Extract and Build APK & AAB
+    name: Build APK & AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -24,45 +24,19 @@ jobs:
       - name: Expose Android SDK
         run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Extract Project ZIP and Build
-        run: |
-          echo "Looking for ZIP files..."
-          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
-          
-          if [ -n "$ZIP_FILE" ]; then
-            echo "Found ZIP file: $ZIP_FILE. Extracting..."
-            unzip -q "$ZIP_FILE" -d extracted_project
-            cd extracted_project
-          else
-            echo "No ZIP file found, using repository root."
-          fi
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-          # البحث عن مجلد المشروع الذي يحتوي على gradlew
-          GRADLEW_PATH=$(find . -name "gradlew" -type f -print -quit)
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew not found anywhere!"
-            exit 1
-          fi
-          
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Found gradlew in: $PROJECT_DIR"
-          
-          cd "$PROJECT_DIR"
-          chmod +x gradlew
-          
-          echo "=== Building Debug APK ==="
-          ./gradlew assembleDebug
-          
-          echo "=== Building Release AAB ==="
-          ./gradlew bundleRelease
-          
-          # جمع الملفات الناتجة في مسار موحد للرفع
-          mkdir -p ../../final-outputs
-          find . -name "app-debug.apk" -exec cp {} ../../final-outputs/ \;
-          find . -name "app-release.aab" -exec cp {} ../../final-outputs/ \;
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      - name: Upload APK and AAB Artifacts
+      - name: Build Release AAB
+        run: ./gradlew bundleRelease
+
+      - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
         with:
           name: app-apk-and-aab
-          path: final-outputs/*
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/bundle/release/app-release.aab
