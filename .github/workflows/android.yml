@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build APK and AAB
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Extract and Build APK & AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -24,27 +24,45 @@ jobs:
       - name: Expose Android SDK
         run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      # البحث عن ملف gradlew في أي مجلد فرعي ومنحه الصلاحيات وبناؤه تلقائياً
-      - name: Find and Build APK with Gradle
+      - name: Extract Project ZIP and Build
         run: |
+          echo "Looking for ZIP files..."
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
+          
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Found ZIP file: $ZIP_FILE. Extracting..."
+            unzip -q "$ZIP_FILE" -d extracted_project
+            cd extracted_project
+          else
+            echo "No ZIP file found, using repository root."
+          fi
+
+          # البحث عن مجلد المشروع الذي يحتوي على gradlew
           GRADLEW_PATH=$(find . -name "gradlew" -type f -print -quit)
           if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew not found!"
+            echo "Error: gradlew not found anywhere!"
             exit 1
           fi
+          
           PROJECT_DIR=$(dirname "$GRADLEW_PATH")
           echo "Found gradlew in: $PROJECT_DIR"
           
           cd "$PROJECT_DIR"
           chmod +x gradlew
+          
+          echo "=== Building Debug APK ==="
           ./gradlew assembleDebug
           
-          # نسخ ملف الـ APK الناتج إلى مسار ثابت لرفع الـ Artifact
-          mkdir -p ../output-apk
-          find . -name "app-debug.apk" -exec cp {} ../output-apk/ \;
+          echo "=== Building Release AAB ==="
+          ./gradlew bundleRelease
+          
+          # جمع الملفات الناتجة في مسار موحد للرفع
+          mkdir -p ../../final-outputs
+          find . -name "app-debug.apk" -exec cp {} ../../final-outputs/ \;
+          find . -name "app-release.aab" -exec cp {} ../../final-outputs/ \;
 
-      - name: Upload APK
+      - name: Upload APK and AAB Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: output-apk/*.apk
+          name: app-apk-and-aab
+          path: final-outputs/*
