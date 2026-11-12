@@ -24,17 +24,27 @@ jobs:
       - name: Expose Android SDK
         run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Extract ZIP and Generate Gradle Wrapper
+      - name: Extract and Build Automatically
         run: |
           echo "=== Extracting ZIP ==="
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
           unzip -q "$ZIP_FILE" -d extracted_project
           
-          # الدخول مباشرة داخل مجلد المشروع الذي ظهر في السجلات
-          cd extracted_project/sadaqaapp
+          echo "=== Finding project directory ==="
+          # البحث تلقائياً عن مجلد يحتوي على ملف build.gradle أو build.gradle.kts
+          BUILD_FILE=$(find extracted_project -name "build.gradle*" -type f -print -quit)
           
-          echo "=== Generating Gradle Wrapper automatically ==="
-          # توليد ملفات الجرادل المفقودة لضمان نجاح البناء
+          if [ -z "$BUILD_FILE" ]; then
+            echo "Error: Android build file not found in extracted contents!"
+            exit 1
+          fi
+          
+          PROJECT_DIR=$(dirname "$BUILD_FILE")
+          echo "Found project directory at: $PROJECT_DIR"
+          
+          cd "$PROJECT_DIR"
+          
+          echo "=== Generating Gradle Wrapper ==="
           gradle wrapper --gradle-version 8.9
           
           chmod +x gradlew
