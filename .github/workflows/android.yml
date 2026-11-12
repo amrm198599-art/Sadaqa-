@@ -24,30 +24,29 @@ jobs:
       - name: Expose Android SDK
         run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Unzip Project and Build
+      - name: Inspect and Build from ZIP
         run: |
-          echo "Checking available ZIP files..."
+          echo "=== Checking files in root ==="
           ls -la
           
-          # البحث عن ملف الـ ZIP الموجود في المستودع وفكه
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
           
           if [ -z "$ZIP_FILE" ]; then
-            echo "Error: No ZIP file found in repository root!"
+            echo "Error: No ZIP file found!"
             exit 1
           fi
           
-          echo "Extracting $ZIP_FILE..."
+          echo "=== Extracting $ZIP_FILE ==="
           unzip -q "$ZIP_FILE" -d extracted_project
           
-          # الدخول داخل المجلد المفكوك والبحث عن مكان الـ gradlew
-          cd extracted_project
+          echo "=== Contents of extracted folder ==="
+          find extracted_project -maxdepth 3
           
-          # إذا كان الملف المضغوط يحتوي على مجلد رئيسي بداخله
-          GRADLEW_PATH=$(find . -name "gradlew" -type f -print -quit)
+          # محاولة البحث عن مجلد المشروع أو الـ gradlew بشكل أعمق
+          GRADLEW_PATH=$(find extracted_project -name "gradlew" -type f -print -quit)
           
           if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew not found inside the extracted files!"
+            echo "Error: gradlew is still missing inside the ZIP contents!"
             exit 1
           fi
           
@@ -63,7 +62,6 @@ jobs:
           echo "=== Building Release AAB ==="
           ./gradlew bundleRelease
           
-          # نسخ الملفات الناتجة لمجلد موحد للرفع
           mkdir -p ../../final-outputs
           find . -name "app-debug.apk" -exec cp {} ../../final-outputs/ \;
           find . -name "app-release.aab" -exec cp {} ../../final-outputs/ \;
