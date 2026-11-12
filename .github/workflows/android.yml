@@ -24,36 +24,19 @@ jobs:
       - name: Expose Android SDK
         run: echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      - name: Inspect and Build from ZIP
+      - name: Extract ZIP and Generate Gradle Wrapper
         run: |
-          echo "=== Checking files in root ==="
-          ls -la
-          
+          echo "=== Extracting ZIP ==="
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
-          
-          if [ -z "$ZIP_FILE" ]; then
-            echo "Error: No ZIP file found!"
-            exit 1
-          fi
-          
-          echo "=== Extracting $ZIP_FILE ==="
           unzip -q "$ZIP_FILE" -d extracted_project
           
-          echo "=== Contents of extracted folder ==="
-          find extracted_project -maxdepth 3
+          # الدخول مباشرة داخل مجلد المشروع الذي ظهر في السجلات
+          cd extracted_project/sadaqaapp
           
-          # محاولة البحث عن مجلد المشروع أو الـ gradlew بشكل أعمق
-          GRADLEW_PATH=$(find extracted_project -name "gradlew" -type f -print -quit)
+          echo "=== Generating Gradle Wrapper automatically ==="
+          # توليد ملفات الجرادل المفقودة لضمان نجاح البناء
+          gradle wrapper --gradle-version 8.9
           
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew is still missing inside the ZIP contents!"
-            exit 1
-          fi
-          
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Found gradlew in: $PROJECT_DIR"
-          
-          cd "$PROJECT_DIR"
           chmod +x gradlew
           
           echo "=== Building Debug APK ==="
