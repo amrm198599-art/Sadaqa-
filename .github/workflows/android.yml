@@ -12,11 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. سحب الكود من المستودع
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. إعداد بيئة جافا (Java 17 أو أحدث حسب متطلبات مشروعك)
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -24,19 +22,17 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      # 3. إعداد Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 4. منح صلاحيات التشغيل لملف Gradlew (مهم جداً لنظام لينكس)
+      # منح صلاحيات التنفيذ لـ gradlew
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 5. بناء التطبيق (Debug APK) باستخدام Gradle Wrapper الموجود في المشروع
+      # بناء التطبيق مباشرة باستخدام الـ Wrapper الموجود في مشروعك (وهو الأصح)
       - name: Build Debug APK with Gradle
         run: ./gradlew assembleDebug
 
-      # 6. رفع ملف الـ APK الناتج ليكون متاحاً للتحميل من الـ Actions
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
